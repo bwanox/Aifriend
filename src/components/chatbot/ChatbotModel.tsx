@@ -1,7 +1,7 @@
 'use client';
 
 import * as THREE from 'three';
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { type Emotion } from '@/lib/types';
 
@@ -30,6 +30,7 @@ const emotionConfig = {
 };
 
 const NUM_PARTICLES_PER_RING = 60;
+const NUM_RINGS = 4;
 
 type ChatbotModelProps = {
   emotion: Emotion;
@@ -43,37 +44,87 @@ export default function ChatbotModel({ emotion, isSpeaking }: ChatbotModelProps)
   
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
+  // Store random values for each ring to make their movement unique
+  const ringParams = useMemo(() => 
+    [...Array(NUM_RINGS)].map(() => ({
+      rotationSpeed: (Math.random() - 0.5) * 0.5,
+      waveFrequency: 2 + Math.random() * 4,
+      waveAmplitude: 0.1 + Math.random() * 0.2,
+    })), []);
+
+  // For saccade (quick glance) movement
+  const saccade = useRef({
+    targetRotation: new THREE.Quaternion(),
+    isSaccading: false,
+    timer: 0,
+  });
+
+  useEffect(() => {
+    // Reset saccade timer on emotion change
+    saccade.current.timer = Math.random() * 5;
+  }, [emotion]);
+
+
   useFrame((state, delta) => {
     if (!group.current || !core.current) return;
     
     const t = state.clock.getElapsedTime();
     const config = emotionConfig[emotion] || emotionConfig.idle;
 
-    // Smooth bobbing animation
-    const bobbleY = Math.sin(t * 1.5) * 0.1;
-    group.current.position.y = THREE.MathUtils.lerp(group.current.position.y, bobbleY, 0.05);
+    // --- Core Animation ---
+    // 1. Organic, Perlin-like floating motion
+    const driftX = Math.sin(t * 0.2) * 0.05 + Math.sin(t * 0.7) * 0.02;
+    const driftY = Math.cos(t * 0.3) * 0.1 + Math.sin(t * 0.5) * 0.05;
+    const driftZ = Math.sin(t * 0.4) * 0.05;
+    group.current.position.x = THREE.MathUtils.lerp(group.current.position.x, driftX, 0.02);
+    group.current.position.y = THREE.MathUtils.lerp(group.current.position.y, driftY + 0.5, 0.02);
+    group.current.position.z = THREE.MathUtils.lerp(group.current.position.z, driftZ, 0.02);
 
-    // Update core emissive intensity based on emotion and speaking state
-    const targetIntensity = isSpeaking ? config.intensity * 2 : config.intensity;
+    // 2. Saccade (quick glance) logic
+    saccade.current.timer -= delta;
+    if (saccade.current.timer <= 0 && !saccade.current.isSaccading) {
+      saccade.current.isSaccading = true;
+      const euler = new THREE.Euler(
+        (Math.random() - 0.5) * 0.5,
+        (Math.random() - 0.5) * 0.8,
+        (Math.random() - 0.5) * 0.5
+      );
+      saccade.current.targetRotation.setFromEuler(euler);
+    }
+
+    if (saccade.current.isSaccading) {
+        group.current.quaternion.slerp(saccade.current.targetRotation, 0.1);
+        if (group.current.quaternion.angleTo(saccade.current.targetRotation) < 0.01) {
+            saccade.current.isSaccading = false;
+            saccade.current.timer = 2 + Math.random() * 4; // next saccade in 2-6 seconds
+        }
+    } else {
+        // Gently drift back to neutral rotation
+        group.current.quaternion.slerp(new THREE.Quaternion(), 0.02);
+    }
+
+    // 3. Update core emissive & breathing based on state
+    const targetIntensity = isSpeaking ? config.intensity * 1.5 : config.intensity;
     coreMaterial.emissiveIntensity = THREE.MathUtils.lerp(coreMaterial.emissiveIntensity, targetIntensity, 0.1);
     
-    // Animate core scale for a breathing effect
-    const breathingSpeed = isSpeaking ? config.speed * 2 : config.speed;
-    const breathingScale = isSpeaking ? config.scale * 1.5 : config.scale;
-    const coreScale = 1 + Math.sin(t * breathingSpeed) * breathingScale;
-    core.current.scale.setScalar(THREE.MathUtils.lerp(core.current.scale.x, coreScale, 0.1));
+    const breathingSpeed = isSpeaking ? config.speed * 1.8 : config.speed;
+    const breathingScale = isSpeaking ? 1 + Math.sin(t * breathingSpeed) * config.scale * 1.5 : 1;
+    const targetScale = isSpeaking ? 1.05 : 1; // Unfurl effect when speaking
+    core.current.scale.setScalar(THREE.MathUtils.lerp(core.current.scale.x, breathingScale * targetScale, 0.1));
 
-    // Animate particle rings
+    // --- Particle Ring Animation ---
     particleRings.current.forEach((instancedMesh, ringIndex) => {
       if (!instancedMesh) return;
 
-      const baseSpeed = isSpeaking ? config.particleSpeed * 2.5 : config.particleSpeed;
-      const baseRadius = isSpeaking ? config.ringRadius * 1.1 : config.ringRadius;
-
-      const speedFactor = baseSpeed * (1 + ringIndex * 0.1);
-      const radius = baseRadius * (0.8 + ringIndex * 0.15);
+      const baseSpeed = isSpeaking ? config.particleSpeed * 2 : config.particleSpeed;
+      const baseRadius = isSpeaking ? config.ringRadius * 1.2 : config.ringRadius;
       
-      instancedMesh.rotation.y += delta * speedFactor * 0.2 * (ringIndex % 2 === 0 ? 1 : -1);
+      const params = ringParams[ringIndex];
+      const speedFactor = baseSpeed * (1 + ringIndex * 0.2);
+      const radius = baseRadius * (0.8 + ringIndex * 0.2);
+      
+      instancedMesh.rotation.y += delta * speedFactor * params.rotationSpeed;
+      instancedMesh.rotation.x += delta * speedFactor * params.rotationSpeed * 0.2;
 
       for (let i = 0; i < NUM_PARTICLES_PER_RING; i++) {
         const angle = (i / NUM_PARTICLES_PER_RING) * Math.PI * 2;
@@ -81,14 +132,15 @@ export default function ChatbotModel({ emotion, isSpeaking }: ChatbotModelProps)
         const z = Math.sin(angle) * radius;
         
         const waveSpeed = t * speedFactor;
-        const wave1 = Math.sin(angle * 3 + waveSpeed) * 0.2;
-        const wave2 = Math.cos(angle * 5 + waveSpeed * 0.5) * 0.1;
+        const wave1 = Math.sin(angle * params.waveFrequency + waveSpeed) * params.waveAmplitude;
+        const wave2 = Math.cos(angle * (params.waveFrequency * 0.5) + waveSpeed * 0.5) * (params.waveAmplitude * 0.5);
         const y = wave1 + wave2;
         
         dummy.position.set(x, y, z);
-
-        const particleScale = 0.5 + Math.sin(angle * 7 + waveSpeed) * 0.5;
-        dummy.scale.setScalar(particleScale * (isSpeaking ? 1.5 : 1));
+        
+        const speakingPulse = isSpeaking ? 1.0 + Math.sin(t * 10 + i * 0.5) * 0.5 : 1.0;
+        const particleScale = (0.5 + Math.sin(angle * 7 + waveSpeed) * 0.5) * speakingPulse;
+        dummy.scale.setScalar(particleScale * 0.8);
 
         dummy.lookAt(core.current.position);
         dummy.updateMatrix();
@@ -99,12 +151,12 @@ export default function ChatbotModel({ emotion, isSpeaking }: ChatbotModelProps)
   });
 
   return (
-    <group ref={group} dispose={null} position={[0, 0.5, 0]} castShadow receiveShadow>
+    <group ref={group} dispose={null} castShadow receiveShadow>
       <mesh ref={core} material={coreMaterial} castShadow>
         <icosahedronGeometry args={[0.5, 3]} />
       </mesh>
       
-      {[...Array(4)].map((_, i) => (
+      {[...Array(NUM_RINGS)].map((_, i) => (
         <instancedMesh 
             key={i}
             ref={el => { if (el) particleRings.current[i] = el; }}
