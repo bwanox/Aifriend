@@ -1,0 +1,168 @@
+'use client';
+
+import React, { useRef, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { type Message } from '@/lib/types';
+import { Mic, Send, Square, Trash2, Loader } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Form, FormControl, FormField, FormItem } from '@/components/ui/form';
+import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
+
+const FormSchema = z.object({
+  message: z.string(),
+});
+
+type ChatInterfaceProps = {
+  messages: Message[];
+  onSendMessage: (text: string) => void;
+  isLoading: boolean;
+  isListening: boolean;
+  isSpeaking: boolean;
+  onStartListening: () => void;
+  onStopListening: () => void;
+  onClearChat: () => void;
+  onStop: () => void;
+};
+
+export default function ChatInterface({
+  messages,
+  onSendMessage,
+  isLoading,
+  isListening,
+  isSpeaking,
+  onStartListening,
+  onStopListening,
+  onClearChat,
+  onStop,
+}: ChatInterfaceProps) {
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  const form = useForm<z.infer<typeof FormSchema>>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: {
+      message: '',
+    },
+  });
+
+  function onSubmit(data: z.infer<typeof FormSchema>) {
+    if (data.message.trim()) {
+      onSendMessage(data.message);
+      form.reset({ message: '' });
+    }
+  }
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [messages]);
+
+
+  return (
+    <TooltipProvider>
+      <div className="w-full max-w-3xl mx-auto p-4 pb-8 bg-background/80 backdrop-blur-sm rounded-t-xl">
+        <ScrollArea className="h-48 md:h-64 mb-4 pr-4" ref={scrollAreaRef}>
+          <div className="flex flex-col gap-4">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={cn(
+                  'flex items-start gap-3',
+                  msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                )}
+              >
+                <div
+                  className={cn(
+                    'max-w-xs md:max-w-md p-3 rounded-2xl',
+                    msg.sender === 'user'
+                      ? 'bg-primary text-primary-foreground rounded-br-none'
+                      : 'bg-muted text-muted-foreground rounded-bl-none'
+                  )}
+                >
+                  <p className="text-sm">{msg.text}</p>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                  <div className="bg-muted text-muted-foreground rounded-2xl p-3 rounded-bl-none">
+                      <Loader className="h-5 w-5 animate-spin" />
+                  </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center gap-2">
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button type="button" size="icon" variant="ghost" onClick={onClearChat} className="shrink-0">
+                        <Trash2 className="h-5 w-5" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Clear Chat</p></TooltipContent>
+            </Tooltip>
+
+            <FormField
+              control={form.control}
+              name="message"
+              render={({ field }) => (
+                <FormItem className="flex-grow">
+                  <FormControl>
+                    <Textarea
+                      placeholder="Type a message or use the mic..."
+                      className="resize-none"
+                      onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              form.handleSubmit(onSubmit)();
+                          }
+                      }}
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <Button type="submit" size="icon" disabled={isLoading} className="shrink-0">
+              <Send className="h-5 w-5" />
+            </Button>
+            
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button type="button" size="icon" variant={isListening ? 'destructive' : 'default'} onClick={isListening ? onStopListening : onStartListening} disabled={isSpeaking} className="shrink-0">
+                        <Mic className={cn("h-5 w-5", isListening && "animate-pulse")} />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>{isListening ? 'Stop Listening' : 'Speak'}</p></TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button type="button" size="icon" variant="ghost" onClick={onStop} disabled={!isSpeaking && !isLoading} className="shrink-0">
+                        <Square className="h-5 w-5" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Stop</p></TooltipContent>
+            </Tooltip>
+          </form>
+        </Form>
+      </div>
+    </TooltipProvider>
+  );
+}
