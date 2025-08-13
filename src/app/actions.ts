@@ -2,13 +2,13 @@
 
 import { analyzeUserSentiment } from '@/ai/flows/analyze-user-sentiment';
 import { generateChatResponse } from '@/ai/flows/generate-chat-response';
-import { type Message } from '@/lib/types';
+import { type Message, type AIMessage } from '@/lib/ai-types';
 
 export async function getAIResponse(currentMessage: string, history: Message[]) {
   try {
     const sentimentAnalysis = await analyzeUserSentiment({ message: currentMessage });
 
-    const formattedHistory = history.map(msg => ({
+    const formattedHistory: AIMessage[] = history.map(msg => ({
         role: msg.sender === 'bot' ? 'model' : 'user',
         content: msg.text
     }));

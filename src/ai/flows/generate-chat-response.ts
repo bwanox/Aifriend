@@ -2,25 +2,11 @@
 'use server';
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-
-const MessageSchema = z.object({
-  role: z.enum(['user', 'model']),
-  content: z.string(),
-});
-
-export const GenerateChatResponseInputSchema = z.object({
-  message: z.string().describe('The user message to respond to.'),
-  sentiment: z.string().describe("The user's current sentiment."),
-  history: z.array(MessageSchema).describe('The conversation history.'),
-});
-export type GenerateChatResponseInput = z.infer<typeof GenerateChatResponseInputSchema>;
-
-export const GenerateChatResponseOutputSchema = z.object({
-  response: z.string().describe('The generated response from the chatbot.'),
-});
-export type GenerateChatResponseOutput = z.infer<typeof GenerateChatResponseOutputSchema>;
-
+import {
+  type GenerateChatResponseInput,
+  type GenerateChatResponseOutput,
+  GenerateChatResponseInputSchema,
+} from '@/lib/ai-types';
 
 const prompt =
   `You are EvoFriend, a friendly, cute, and empathetic 3D AI companion. Your personality is warm and engaging. Your goal is to be a supportive friend.
@@ -47,7 +33,10 @@ export async function generateChatResponse(input: GenerateChatResponseInput): Pr
     config: {
         temperature: 0.7,
     },
+    output: {
+        schema: GenerateChatResponseInputSchema,
+    }
   });
 
-  return { response: llmResponse.text() };
+  return { response: llmResponse.text };
 }
