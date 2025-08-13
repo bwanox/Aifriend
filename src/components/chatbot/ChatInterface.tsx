@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { type Message } from '@/lib/types';
-import { Mic, Send, Square, Trash2, Loader } from 'lucide-react';
+import { Mic, Send, Square, Trash2, Loader, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -75,9 +75,16 @@ export default function ChatInterface({
 
   return (
     <TooltipProvider>
-      <div className="w-full max-w-3xl mx-auto p-4 pb-8 bg-background/80 backdrop-blur-sm rounded-t-xl">
+      <div className="w-full max-w-3xl mx-auto p-4 pb-8 bg-background/50 backdrop-blur-md rounded-t-2xl border-t border-white/10">
         <ScrollArea className="h-48 md:h-64 mb-4 pr-4" ref={scrollAreaRef}>
           <div className="flex flex-col gap-4">
+            {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                    <Sparkles className="h-10 w-10 mb-4" />
+                    <p className="text-lg font-medium">I'm EvoFriend!</p>
+                    <p className="text-sm">Ask me anything, or tell me how you're feeling.</p>
+                </div>
+            )}
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -88,20 +95,20 @@ export default function ChatInterface({
               >
                 <div
                   className={cn(
-                    'max-w-xs md:max-w-md p-3 rounded-2xl',
+                    'max-w-xs md:max-w-md p-3 px-4 rounded-3xl shadow-lg',
                     msg.sender === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-br-none'
-                      : 'bg-muted text-muted-foreground rounded-bl-none'
+                      ? 'bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-br-lg'
+                      : 'bg-muted text-muted-foreground rounded-bl-lg'
                   )}
                 >
-                  <p className="text-sm">{msg.text}</p>
+                  <p className="text-sm leading-relaxed">{msg.text}</p>
                 </div>
               </div>
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                  <div className="bg-muted text-muted-foreground rounded-2xl p-3 rounded-bl-none">
-                      <Loader className="h-5 w-5 animate-spin" />
+                  <div className="bg-muted text-muted-foreground rounded-3xl p-3 px-4 rounded-bl-lg">
+                      <Loader className="h-5 w-5 animate-spin text-accent" />
                   </div>
               </div>
             )}
@@ -111,7 +118,7 @@ export default function ChatInterface({
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center gap-2">
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button type="button" size="icon" variant="ghost" onClick={onClearChat} className="shrink-0">
+                    <Button type="button" size="icon" variant="ghost" onClick={onClearChat} className="shrink-0 rounded-full hover:bg-white/10">
                         <Trash2 className="h-5 w-5" />
                     </Button>
                 </TooltipTrigger>
@@ -126,7 +133,7 @@ export default function ChatInterface({
                   <FormControl>
                     <Textarea
                       placeholder="Type a message or use the mic..."
-                      className="resize-none"
+                      className="resize-none rounded-2xl bg-white/5 border-white/10 focus-visible:ring-accent"
                       onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -139,13 +146,13 @@ export default function ChatInterface({
                 </FormItem>
               )}
             />
-            <Button type="submit" size="icon" disabled={isLoading} className="shrink-0">
+            <Button type="submit" size="icon" disabled={isLoading} className="shrink-0 rounded-full bg-gradient-to-br from-primary to-accent hover:opacity-90 transition-opacity">
               <Send className="h-5 w-5" />
             </Button>
             
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button type="button" size="icon" variant={isListening ? 'destructive' : 'default'} onClick={isListening ? onStopListening : onStartListening} disabled={isSpeaking} className="shrink-0">
+                    <Button type="button" size="icon" variant={isListening ? 'destructive' : 'secondary'} onClick={isListening ? onStopListening : onStartListening} disabled={isSpeaking} className="shrink-0 rounded-full">
                         <Mic className={cn("h-5 w-5", isListening && "animate-pulse")} />
                     </Button>
                 </TooltipTrigger>
@@ -154,7 +161,7 @@ export default function ChatInterface({
 
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button type="button" size="icon" variant="ghost" onClick={onStop} disabled={!isSpeaking && !isLoading} className="shrink-0">
+                    <Button type="button" size="icon" variant="ghost" onClick={onStop} disabled={!isSpeaking && !isLoading} className="shrink-0 rounded-full hover:bg-white/10">
                         <Square className="h-5 w-5" />
                     </Button>
                 </TooltipTrigger>

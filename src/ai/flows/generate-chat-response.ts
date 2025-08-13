@@ -5,7 +5,7 @@ import { ai } from '@/ai/genkit';
 import {
   type GenerateChatResponseInput,
   type GenerateChatResponseOutput,
-  GenerateChatResponseInputSchema,
+  GenerateChatResponseOutputSchema,
 } from '@/lib/ai-types';
 
 const prompt =
@@ -34,7 +34,7 @@ export async function generateChatResponse(input: GenerateChatResponseInput): Pr
         temperature: 0.7,
     },
     output: {
-        schema: GenerateChatResponseInputSchema,
+        schema: GenerateChatResponseOutputSchema,
     }
   });
 
