@@ -1,0 +1,11 @@
+diff --git a/node_modules/@react-three/fiber/dist/react-three-fiber.esm.js b/node_modules/@react-three/fiber/dist/react-three-fiber.esm.js
+index 2a835b3..2653350 100644
+--- a/node_modules/@react-three/fiber/dist/react-three-fiber.esm.js
++++ b/node_modules/@react-three/fiber/dist/react-three-fiber.esm.js
+@@ -1,5 +1,5 @@
+ import * as React from 'react';
+-import { flushSync } from 'react-dom';
++import { flushSync } from 'react-dom/client';
+ import { createEvents } from './events.js';
+ export * from './events.js';
+ import { reconciler } from './reconciler.js';
