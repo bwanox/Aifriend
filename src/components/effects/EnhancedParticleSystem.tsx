@@ -24,7 +24,10 @@ export default function EnhancedParticleSystem() {
 
     // Calculate proper bounds based on camera and viewport
     const aspect = viewport.width / viewport.height;
-    const fov = camera.fov * (Math.PI / 180);
+    let fov = Math.PI / 4; // default to 45deg in radians
+    if ('fov' in camera) {
+      fov = camera.fov * (Math.PI / 180);
+    }
     const cameraDistance = camera.position.length();
 
     // Calculate visible bounds at different depths
@@ -84,7 +87,10 @@ export default function EnhancedParticleSystem() {
 
       // Recalculate visible bounds for boundary management
       const aspect = viewport.width / viewport.height;
-      const fov = camera.fov * (Math.PI / 180);
+      let fov = Math.PI / 4; // default to 45deg in radians
+      if ('fov' in camera) {
+        fov = camera.fov * (Math.PI / 180);
+      }
       const avgDepth = 20;
       const visibleHeight = 2 * Math.tan(fov / 2) * avgDepth;
       const visibleWidth = visibleHeight * aspect;

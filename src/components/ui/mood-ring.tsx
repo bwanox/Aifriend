@@ -13,6 +13,7 @@ const emotionColors = {
   sad: '#ef4444',
   thinking: '#f59e0b',
   surprised: '#ec4899',
+  excited: '#a21caf', // Added for 'excited' emotion
 };
 
 const emotionLabels = {
@@ -21,6 +22,7 @@ const emotionLabels = {
   sad: 'Concerned',
   thinking: 'Processing',
   surprised: 'Energetic',
+  excited: 'Inspired', // Added for 'excited' emotion
 };
 
 const emotionIcons = {
@@ -29,6 +31,7 @@ const emotionIcons = {
   sad: Frown,
   thinking: Brain,
   surprised: Zap,
+  excited: Lightbulb, // Added for 'excited' emotion
 };
 
 export default function MoodRing() {
@@ -170,7 +173,7 @@ export default function MoodRing() {
               <motion.div
                 key={i}
                 className="absolute w-1 h-1 rounded-full"
-                style={{ backgroundColor: emotionColor }}
+                style={{ backgroundColor: emotionColor, left: '50%', top: '50%' }}
                 animate={{
                   x: [0, Math.cos((i * Math.PI) / 3) * 30],
                   y: [0, Math.sin((i * Math.PI) / 3) * 30],
@@ -182,10 +185,6 @@ export default function MoodRing() {
                   repeat: Infinity,
                   delay: i * 0.5,
                   ease: "easeOut"
-                }}
-                style={{
-                  left: '50%',
-                  top: '50%',
                 }}
               />
             ))}
