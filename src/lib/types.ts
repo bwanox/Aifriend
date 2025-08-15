@@ -4,4 +4,4 @@ export interface Message {
   sender: 'user' | 'bot';
 }
 
-export type Emotion = 'idle' | 'happy' | 'thinking' | 'surprised' | 'sad';
+export type Emotion = 'idle' | 'happy' | 'thinking' | 'surprised' | 'sad' | 'excited';
