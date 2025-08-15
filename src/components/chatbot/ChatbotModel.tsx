@@ -29,6 +29,10 @@ const emotionConfig = {
     speed: 3.5, intensity: 8, particleSpeed: 2.2, ringRadius: 1.3, scale: 0.15, coreGlow: 1.0,
     pulseIntensity: 0.6, breathingSpeed: 3.0, energyLevel: 1.0, distortion: 0.4
   },
+  excited: {
+    speed: 4.0, intensity: 10, particleSpeed: 2.8, ringRadius: 1.4, scale: 0.18, coreGlow: 1.2,
+    pulseIntensity: 0.8, breathingSpeed: 3.5, energyLevel: 1.2, distortion: 0.5
+  },
 };
 
 const NUM_PARTICLES_PER_RING = 32; // More particles for richer visual
