@@ -13,6 +13,8 @@ export const GenerateChatResponseInputSchema = z.object({
   message: z.string().describe('The user message to respond to.'),
   sentiment: z.string().describe("The user's current sentiment."),
   history: z.array(AIMessageSchema).describe('The conversation history.'),
+  personality: z.string().optional().describe('The personality of the AI.'),
+  conversationMode: z.string().optional().describe('The conversation mode.'),
 });
 export type GenerateChatResponseInput = z.infer<typeof GenerateChatResponseInputSchema>;
 
