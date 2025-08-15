@@ -419,7 +419,8 @@ export default function EnhancedChatInterface({
                           field.onChange(e);
                           setIsTyping(e.target.value.length > 0);
                         }}
-                        {...field}
+                        // Remove onChange from field to avoid duplicate
+                        {...Object.fromEntries(Object.entries(field).filter(([k]) => k !== 'onChange'))}
                       />
                     </FormControl>
                   </FormItem>
