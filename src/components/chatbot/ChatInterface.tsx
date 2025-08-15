@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { type Message } from '@/lib/types';
-import { Mic, Send, Square, Trash2, Loader, Sparkles } from 'lucide-react';
+import { Mic, Send, Square, Trash2, Loader, Sparkles, Volume2, VolumeX } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useSpeech } from '@/hooks/useSpeech';
 
 
 const FormSchema = z.object({
@@ -48,7 +49,15 @@ export default function ChatInterface({
   onStop,
 }: ChatInterfaceProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  
+  const [isSoundOn, setIsSoundOn] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('evofriend-sound');
+      return stored === null ? true : stored === 'true';
+    }
+    return true;
+  });
+  const { speak, stopSpeaking } = useSpeech();
+
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -72,6 +81,34 @@ export default function ChatInterface({
     }
   }, [messages]);
 
+  // Play AI message with speech synthesis if sound is on
+  useEffect(() => {
+    if (!isSoundOn) {
+      stopSpeaking();
+      return;
+    }
+    // Only speak the latest AI message
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.sender === 'bot' && lastMsg.text) {
+        speak(lastMsg.text);
+      }
+    }
+    // eslint-disable-next-line
+  }, [messages, isSoundOn]);
+
+  // Persist sound state
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('evofriend-sound', isSoundOn.toString());
+    }
+  }, [isSoundOn]);
+
+  // Stop speaking on clear chat
+  const handleClearChat = () => {
+    stopSpeaking();
+    onClearChat();
+  };
 
   return (
     <TooltipProvider>
@@ -116,9 +153,26 @@ export default function ChatInterface({
         </ScrollArea>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-center gap-2">
+            {/* Sound Control Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setIsSoundOn((prev) => !prev)}
+                  className="shrink-0 rounded-full hover:bg-white/10"
+                  aria-label={isSoundOn ? 'Mute' : 'Unmute'}
+                >
+                  {isSoundOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>{isSoundOn ? 'Mute' : 'Unmute'}</p></TooltipContent>
+            </Tooltip>
+            {/* Clear Chat Button */}
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button type="button" size="icon" variant="ghost" onClick={onClearChat} className="shrink-0 rounded-full hover:bg-white/10">
+                    <Button type="button" size="icon" variant="ghost" onClick={handleClearChat} className="shrink-0 rounded-full hover:bg-white/10">
                         <Trash2 className="h-5 w-5" />
                     </Button>
                 </TooltipTrigger>

@@ -4,7 +4,12 @@ import { analyzeUserSentiment } from '@/ai/flows/analyze-user-sentiment';
 import { generateChatResponse } from '@/ai/flows/generate-chat-response';
 import { type Message, type AIMessage } from '@/lib/ai-types';
 
-export async function getAIResponse(currentMessage: string, history: Message[]) {
+export async function getAIResponse(
+  currentMessage: string,
+  history: Message[],
+  personality: string = 'friendly',
+  conversationMode: string = 'casual'
+) {
   try {
     const sentimentAnalysis = await analyzeUserSentiment({ message: currentMessage });
 
@@ -17,6 +22,8 @@ export async function getAIResponse(currentMessage: string, history: Message[]) 
       message: currentMessage,
       sentiment: sentimentAnalysis.sentiment,
       history: formattedHistory,
+      personality,
+      conversationMode,
     });
 
     return {

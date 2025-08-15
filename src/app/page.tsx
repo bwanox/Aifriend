@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { type Message, type Emotion } from '@/lib/types';
+import { useState, useEffect } from 'react';
+import { type Message } from '@/lib/types';
 import { getAIResponse } from '@/app/actions';
 import { useSpeech } from '@/hooks/useSpeech';
+import { motion } from 'framer-motion';
 
 import ChatbotCanvas from '@/components/chatbot/ChatbotCanvas';
-import ChatInterface from '@/components/chatbot/ChatInterface';
+import EnhancedChatInterface from '@/components/chatbot/EnhancedChatInterface';
+import SettingsPanel from '@/components/ui/settings-panel';
+import MoodRing from '@/components/ui/mood-ring';
+import ConversationStats from '@/components/ui/conversation-stats';
+import { AppProvider, useAppContext } from '@/contexts/AppContext';
 
-export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [botEmotion, setBotEmotion] = useState<Emotion>('idle');
+function HomeContent() {
+  const { state, dispatch } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const {
     isListening,
@@ -31,26 +35,41 @@ export default function Home() {
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
-    const userMessage: Message = { id: Date.now().toString(), text, sender: 'user' };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text,
+      sender: 'user'
+    };
+
+    dispatch({ type: 'ADD_MESSAGE', payload: userMessage });
     setIsLoading(true);
-    setBotEmotion('thinking');
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'SET_EMOTION', payload: 'thinking' });
 
     try {
       const { response, sentiment } = await getAIResponse(
         text,
-        messages.slice(-5)
+        state.messages.slice(-5),
+        state.botPersonality,
+        state.conversationMode
       );
 
-      const botMessage: Message = { id: Date.now().toString() + 'b', text: response, sender: 'bot' };
-      
-      const newEmotion = sentiment === 'positive' ? 'happy' : sentiment === 'negative' ? 'sad' : 'idle';
-      setBotEmotion(newEmotion);
-      
-      setMessages((prev) => [...prev, botMessage]);
-      speak(response, () => {
-        setBotEmotion('idle');
-      });
+      const botMessage: Message = {
+        id: Date.now().toString() + 'b',
+        text: response,
+        sender: 'bot'
+      };
+
+      const newEmotion = sentiment === 'positive' ? 'happy' :
+                        sentiment === 'negative' ? 'sad' : 'idle';
+      dispatch({ type: 'SET_EMOTION', payload: newEmotion });
+      dispatch({ type: 'ADD_MESSAGE', payload: botMessage });
+
+      if (state.userPreferences.voiceEnabled) {
+        speak(response, () => {
+          dispatch({ type: 'SET_EMOTION', payload: 'idle' });
+        });
+      }
     } catch (error) {
       console.error('Error getting AI response:', error);
       const errorMessage: Message = {
@@ -58,50 +77,113 @@ export default function Home() {
         text: "Sorry, I'm having a little trouble thinking right now.",
         sender: 'bot',
       };
-      setMessages((prev) => [...prev, errorMessage]);
-      setBotEmotion('sad');
+      dispatch({ type: 'ADD_MESSAGE', payload: errorMessage });
+      dispatch({ type: 'SET_EMOTION', payload: 'sad' });
     } finally {
       setIsLoading(false);
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
   
   const handleClearChat = () => {
-    setMessages([]);
+    dispatch({ type: 'CLEAR_MESSAGES' });
     stopSpeaking();
-    setBotEmotion('idle');
+    dispatch({ type: 'SET_EMOTION', payload: 'idle' });
   };
 
   const handleStop = () => {
-    if(isSpeaking) {
+    if (isSpeaking) {
       stopSpeaking();
-      setBotEmotion('idle');
+      dispatch({ type: 'SET_EMOTION', payload: 'idle' });
     }
     if (isLoading) {
-      // In a real scenario, you might want to add a request cancellation logic here
       setIsLoading(false);
-      setBotEmotion('idle');
+      dispatch({ type: 'SET_LOADING', payload: false });
+      dispatch({ type: 'SET_EMOTION', payload: 'idle' });
     }
-  }
+  };
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden">
-      <div className="flex-1 relative">
+    <motion.div
+      className="relative w-full h-screen overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Settings Panel */}
+      <SettingsPanel />
+
+      {/* Mood Ring */}
+      <MoodRing />
+
+      {/* Conversation Stats */}
+      <ConversationStats />
+
+      {/* Full-Screen 3D Canvas - takes entire viewport */}
+      <motion.div
+        className="absolute inset-0 w-full h-full"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+      >
         <ChatbotCanvas
-          emotion={botEmotion}
+          emotion={state.botEmotion}
           isSpeaking={isSpeaking}
         />
-      </div>
-      <ChatInterface
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-        isListening={isListening}
-        isSpeaking={isSpeaking}
-        onStartListening={startListening}
-        onStopListening={stopListening}
-        onClearChat={handleClearChat}
-        onStop={handleStop}
-      />
-    </div>
+
+        {/* Floating status indicators */}
+        {isListening && (
+          <motion.div
+            className="absolute top-4 left-4 bg-red-500/20 backdrop-blur-sm rounded-full px-3 py-2 flex items-center gap-2 z-10"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+          >
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-white text-sm">Listening...</span>
+          </motion.div>
+        )}
+
+        {isSpeaking && (
+          <motion.div
+            className="absolute top-4 left-4 bg-blue-500/20 backdrop-blur-sm rounded-full px-3 py-2 flex items-center gap-2 z-10"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+          >
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+            <span className="text-white text-sm">Speaking...</span>
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Chat Interface - overlaid at bottom with backdrop blur */}
+      <motion.div
+        className="absolute bottom-0 left-0 right-0 z-20"
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.4 }}
+      >
+        <EnhancedChatInterface
+          messages={state.messages}
+          onSendMessage={handleSendMessage}
+          isLoading={isLoading}
+          isListening={isListening}
+          isSpeaking={isSpeaking}
+          onStartListening={startListening}
+          onStopListening={stopListening}
+          onClearChat={handleClearChat}
+          onStop={handleStop}
+        />
+      </motion.div>
+    </motion.div>
+  );
+}
+
+export default function Home() {
+  return (
+    <AppProvider>
+      <HomeContent />
+    </AppProvider>
   );
 }
